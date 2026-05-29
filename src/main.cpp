@@ -6,6 +6,7 @@
 #include "BuzzerController.h"
 #include "ModeIndicator.h"
 #include "OtaWebServer.h"
+#include "PowerManager.h"
 
 volatile DeviceMode currentMode = FIND_MODE;
 volatile bool otaActivateRequested = false;
@@ -26,6 +27,7 @@ void enterFindMode() {
   setOtaModeIndicator(false);
 
   otaWebStop();
+  powerManagerEnterFindMode();
   startBleScan();
 
   Serial.println(F("已进入找车模式"));
@@ -38,6 +40,7 @@ void enterOtaMode() {
   buzzerOff();
   setOtaModeIndicator(true);
 
+  powerManagerEnterOtaMode();
   otaWebBegin();
   startBleScan();
 }
@@ -66,11 +69,13 @@ void setup() {
   modeIndicatorBegin();
   Serial.begin(115200);
   delay(100);
+  powerManagerBegin();
   enterFindMode();
 }
 
 void loop() {
   handleScheduledRestart();
+  powerManagerUpdate();
 
   if (otaActivateRequested && currentMode != OTA_UPDATING) {
     enterOtaMode();

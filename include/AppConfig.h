@@ -25,7 +25,6 @@ constexpr uint8_t BUZZER_LOST_ALERT_PHASES = 6;
 
 // RSSI 蜂鸣映射说明：
 // RSSI 数值越接近 0 表示越近；数值越小表示越远。
-// 当前逻辑不是分段表，而是在“近距离边界”和“极限距离边界”之间做线性平滑过渡：
 // 越近周期越长、响得越慢；越远周期越短、响得越快；低于极限距离边界时持续长响。
 constexpr int RSSI_SLOW_EDGE_DBM = -50;       // 大于等于该值：距离较近，使用最慢短响周期。
 constexpr int RSSI_CONTINUOUS_EDGE_DBM = -80; // 小于该值：达到极限距离，蜂鸣器持续长响。
@@ -82,4 +81,10 @@ constexpr uint32_t BLE_MODE_COMMAND_CONFIRM_WINDOW_MS = 1200;
 constexpr uint32_t BLE_COMMAND_GUARD_MS = 2500;
 
 // BLE 扫描刷新周期：定期重启扫描并清空已见设备缓存，避免手机停止/重开广播后被旧扫描结果影响。
-constexpr uint32_t BLE_SCAN_REFRESH_MS = 2000;
+constexpr uint32_t BLE_SCAN_REFRESH_MS = 1000;
+
+// CPU 省电策略：仅找车模式使用。无有效蓝牙信号时常态 80MHz，收到有效信号后临时提升到 240MHz。
+// 烧录模式和固件上传过程中始终保持 240MHz，优先保证 WiFi/WebServer/Flash 写入稳定。
+constexpr uint32_t CPU_POWER_SAVE_MHZ = 80;
+constexpr uint32_t CPU_FULL_POWER_MHZ = 240;
+constexpr uint32_t CPU_FULL_POWER_HOLD_MS = 10000;

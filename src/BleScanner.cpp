@@ -5,6 +5,7 @@
 
 #include "AppConfig.h"
 #include "AppState.h"
+#include "PowerManager.h"
 
 namespace {
 NimBLEScan *bleScan = nullptr;
@@ -185,6 +186,7 @@ public:
     const uint32_t now = millis();
     const DeviceMode mode = currentMode;
     logValidCommand(command, session, advertisedDevice->getRSSI());
+    powerManagerNoteValidSignal();
     if (command == BLE_COMMAND_FIND && mode == FIND_MODE) {
       if (hasStoppedFindSession && session == stoppedFindSession) {
         return;
