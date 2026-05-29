@@ -24,19 +24,19 @@ bool isNewerTimestamp(uint32_t value, uint32_t reference) {
   return reference == 0 || static_cast<int32_t>(value - reference) > 0;
 }
 
-// RSSI 在近距离阈值和极限阈值之间线性映射，避免距离变化时蜂鸣节奏跳变。
+// RSSI 在近距离端点和极限距离端点之间线性映射，避免距离变化时蜂鸣节奏跳变。
 uint32_t smoothPulseCycleForRssi(int rssi) {
-  if (rssi >= RSSI_NEAR_THRESHOLD) {
-    return BUZZER_SLOWEST_CYCLE_MS;
+  if (rssi >= RSSI_SLOW_EDGE_DBM) {
+    return BUZZER_SLOW_EDGE_CYCLE_MS;
   }
-  if (rssi <= RSSI_LIMIT_THRESHOLD) {
-    return BUZZER_FASTEST_CYCLE_MS;
+  if (rssi <= RSSI_CONTINUOUS_EDGE_DBM) {
+    return BUZZER_FAST_EDGE_CYCLE_MS;
   }
 
-  const int range = RSSI_NEAR_THRESHOLD - RSSI_LIMIT_THRESHOLD;
-  const int distanceFromNear = RSSI_NEAR_THRESHOLD - rssi;
-  const uint32_t cycleRange = BUZZER_SLOWEST_CYCLE_MS - BUZZER_FASTEST_CYCLE_MS;
-  return BUZZER_SLOWEST_CYCLE_MS - (cycleRange * distanceFromNear / range);
+  const int range = RSSI_SLOW_EDGE_DBM - RSSI_CONTINUOUS_EDGE_DBM;
+  const int distanceFromNear = RSSI_SLOW_EDGE_DBM - rssi;
+  const uint32_t cycleRange = BUZZER_SLOW_EDGE_CYCLE_MS - BUZZER_FAST_EDGE_CYCLE_MS;
+  return BUZZER_SLOW_EDGE_CYCLE_MS - (cycleRange * distanceFromNear / range);
 }
 
 void startLostAlert(uint32_t now) {
@@ -123,7 +123,7 @@ void buzzerUpdate(int rssi, uint32_t lastSeenMs) {
     return;
   }
 
-  if (rssi < RSSI_LIMIT_THRESHOLD) {
+  if (rssi < RSSI_CONTINUOUS_EDGE_DBM) {
     lostAlertActive = false;
     lostAlertDone = false;
     setBuzzer(true);

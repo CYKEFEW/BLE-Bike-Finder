@@ -23,17 +23,16 @@ constexpr uint32_t BUZZER_PULSE_ON_MS = 60;
 constexpr uint32_t BUZZER_LOST_ALERT_STEP_MS = 100;
 constexpr uint8_t BUZZER_LOST_ALERT_PHASES = 6;
 
-// RSSI 阈值说明：
+// RSSI 蜂鸣映射说明：
 // RSSI 数值越接近 0 表示越近；数值越小表示越远。
-// 本项目规则为“越远响得越快，越近响得越慢；到极限距离后持续长响”。
-constexpr int RSSI_NEAR_THRESHOLD = -50;   // 大于等于该值：距离近，慢响。
-constexpr int RSSI_MID_THRESHOLD = -65;    // 大于等于该值：中等距离，中速响。
-constexpr int RSSI_LIMIT_THRESHOLD = -80;  // 小于该值：极限距离，持续长响。
+// 当前逻辑不是分段表，而是在“近距离边界”和“极限距离边界”之间做线性平滑过渡：
+// 越近周期越长、响得越慢；越远周期越短、响得越快；低于极限距离边界时持续长响。
+constexpr int RSSI_SLOW_EDGE_DBM = -50;       // 大于等于该值：距离较近，使用最慢短响周期。
+constexpr int RSSI_CONTINUOUS_EDGE_DBM = -80; // 小于该值：达到极限距离，蜂鸣器持续长响。
 
-// 蜂鸣周期平滑范围，周期越小响得越快。
-// RSSI_NEAR_THRESHOLD 对应最慢周期，RSSI_LIMIT_THRESHOLD 对应最快短响周期。
-constexpr uint32_t BUZZER_SLOWEST_CYCLE_MS = 1000;
-constexpr uint32_t BUZZER_FASTEST_CYCLE_MS = 180;
+// 平滑短响周期端点；只在 RSSI_SLOW_EDGE_DBM 到 RSSI_CONTINUOUS_EDGE_DBM 之间插值使用。
+constexpr uint32_t BUZZER_SLOW_EDGE_CYCLE_MS = 1000; // 近距离端点：慢响。
+constexpr uint32_t BUZZER_FAST_EDGE_CYCLE_MS = 180;  // 远距离端点：快响。
 
 // OTA 烧录热点参数：收到 OTA_ON 蓝牙广播后开启该热点和 Web 烧录页面。
 constexpr char AP_SSID[] = "BLE_Bike_Finder";
@@ -81,3 +80,6 @@ constexpr size_t BLE_PAYLOAD_WITH_CHECKSUM_SIZE = BLE_PAYLOAD_SIZE + BLE_CHECKSU
 constexpr uint8_t BLE_MODE_COMMAND_CONFIRM_COUNT = 2;
 constexpr uint32_t BLE_MODE_COMMAND_CONFIRM_WINDOW_MS = 1200;
 constexpr uint32_t BLE_COMMAND_GUARD_MS = 2500;
+
+// BLE 扫描刷新周期：定期重启扫描并清空已见设备缓存，避免手机停止/重开广播后被旧扫描结果影响。
+constexpr uint32_t BLE_SCAN_REFRESH_MS = 2000;
