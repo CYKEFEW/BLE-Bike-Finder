@@ -1,0 +1,83 @@
+#pragma once
+
+#include <Arduino.h>
+
+// =========================
+// 重要可配置参数集中区
+// =========================
+// 调试或换车时优先修改本文件；其它 cpp 文件只引用这些常量，避免协议和阈值分散在各处。
+
+// 有源蜂鸣器控制脚：高电平响，低电平关闭。
+constexpr uint8_t BUZZER_PIN = 17;
+
+// 烧录模式指示灯控制脚：默认高电平点亮，进入 OTA/上传中点亮，恢复找车或重启前关闭。
+constexpr uint8_t OTA_MODE_LED_PIN = 16;
+
+// 找车广播超时时间：超过此时间没有再收到 FIND 广播，认为手机信号丢失。
+constexpr uint32_t FIND_TIMEOUT_MS = 1500;
+
+// 蜂鸣器每次短响的高电平持续时间。
+constexpr uint32_t BUZZER_PULSE_ON_MS = 60;
+
+// 信号丢失后的提示音：快速响 3 下，每个开/关阶段 100ms，共 6 个阶段。
+constexpr uint32_t BUZZER_LOST_ALERT_STEP_MS = 100;
+constexpr uint8_t BUZZER_LOST_ALERT_PHASES = 6;
+
+// RSSI 阈值说明：
+// RSSI 数值越接近 0 表示越近；数值越小表示越远。
+// 本项目规则为“越远响得越快，越近响得越慢；到极限距离后持续长响”。
+constexpr int RSSI_NEAR_THRESHOLD = -50;   // 大于等于该值：距离近，慢响。
+constexpr int RSSI_MID_THRESHOLD = -65;    // 大于等于该值：中等距离，中速响。
+constexpr int RSSI_LIMIT_THRESHOLD = -80;  // 小于该值：极限距离，持续长响。
+
+// 蜂鸣周期平滑范围，周期越小响得越快。
+// RSSI_NEAR_THRESHOLD 对应最慢周期，RSSI_LIMIT_THRESHOLD 对应最快短响周期。
+constexpr uint32_t BUZZER_SLOWEST_CYCLE_MS = 1000;
+constexpr uint32_t BUZZER_FASTEST_CYCLE_MS = 180;
+
+// OTA 烧录热点参数：收到 OTA_ON 蓝牙广播后开启该热点和 Web 烧录页面。
+constexpr char AP_SSID[] = "BLE_Bike_Finder";
+constexpr char AP_PASSWORD[] = "233233233";
+
+// =========================
+// 蓝牙广播协议
+// =========================
+// 完整 manufacturer data 格式：
+// Company ID(2字节，小端，0xFFFF)
+// + Magic(3字节，"BBF")
+// + Version(1字节，0x01)
+// + DeviceId(4字节)
+// + Command(1字节)
+//
+// Android BLE 广播 API 添加 manufacturer data 时，Company ID 单独传入；
+// ESP32 扫描到的 manufacturer data 中会包含 Company ID。
+constexpr uint16_t BLE_COMPANY_ID = 0xFFFF;
+constexpr uint8_t BLE_MAGIC[] = {'B', 'B', 'F'};
+constexpr uint8_t BLE_PROTOCOL_VERSION = 0x01;
+
+// 设备 ID：手机 App 和 ESP32 固件必须保持一致，否则广播会被忽略。
+// 量产时建议为每台找车器分配不同 DeviceId，降低互相误触发概率。
+constexpr uint8_t BLE_DEVICE_ID[] = {0xB1, 0x4E, 0xF1, 0x32};
+
+// 命令字：同一套广播协议通过最后 1 字节区分不同动作。
+constexpr uint8_t BLE_COMMAND_FIND = 0x01;     // 开启/维持找车蜂鸣。
+constexpr uint8_t BLE_COMMAND_FIND_OFF = 0x02; // 关闭找车蜂鸣。
+constexpr uint8_t BLE_COMMAND_OTA_ON = 0xA0;   // 进入烧录模式，开启热点和 WebServer。
+constexpr uint8_t BLE_COMMAND_OTA_OFF = 0xA1;  // 取消烧录模式，关闭热点并恢复找车。
+
+// 找车会话号：用于区分“旧 FIND 残留包”和“新一轮找车”。
+// App 每次开启找车都会递增 session；关闭找车时发送同一个 session 的 FIND_OFF。
+constexpr size_t BLE_SESSION_SIZE = 1;
+
+// ESP32 收到的 manufacturer data 需要包含 Company ID，因此总长度包含前 2 字节。
+constexpr size_t BLE_PAYLOAD_SIZE = 2 + sizeof(BLE_MAGIC) + 1 + sizeof(BLE_DEVICE_ID) + 1 + BLE_SESSION_SIZE;
+
+// 命令抗干扰参数：
+// 1. 新版广播最后增加 1 字节校验和，ESP32 只接受校验通过的数据。
+// 2. OTA_ON/OTA_OFF 必须在确认窗口内重复收到指定次数才执行。
+// 3. 收到模式命令期间暂时忽略 FIND，防止持续找车广播和瞬时模式命令互相干扰。
+constexpr size_t BLE_CHECKSUM_SIZE = 1;
+constexpr size_t BLE_PAYLOAD_WITH_CHECKSUM_SIZE = BLE_PAYLOAD_SIZE + BLE_CHECKSUM_SIZE;
+constexpr uint8_t BLE_MODE_COMMAND_CONFIRM_COUNT = 2;
+constexpr uint32_t BLE_MODE_COMMAND_CONFIRM_WINDOW_MS = 1200;
+constexpr uint32_t BLE_COMMAND_GUARD_MS = 2500;
